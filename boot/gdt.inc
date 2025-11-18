@@ -1,12 +1,3 @@
-;
-; Created by felix on 9/26/2025.
-;
-
-; COPYRIGHT Fentanyl LLC 2025
-; v0.0.1-beta
-
-; MIT LICENSE
-
 gdtStart:
 	dq 0					; null
 	dq 0x00CF9A000000FFFF	; cs 32

@@ -1,12 +1,3 @@
-;
-; Created by felix on 9/26/2025.
-;
-
-; COPYRIGHT Fentanyl LLC 2025
-; v0.0.1-beta
-
-; MIT LICENSE
-
 [bits 16]
 [org 0x7E00]
 
@@ -33,6 +24,14 @@ pm:
 
 	mov ebp, 0x90000
 	mov esp, ebp
+
+	mov eax, cr4
+	or eax, 0x600
+	mov cr4, eax
+
+	mov eax, cr0
+	or eax, 0x2
+	mov cr0, eax
 
 	pushad
 	pushfd

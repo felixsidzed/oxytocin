@@ -1,12 +1,3 @@
-;
-; Created by felix on 9/26/2025.
-;
-
-; COPYRIGHT Fentanyl LLC 2025
-; v0.0.1-beta
-
-; MIT LICENSE
-
 [bits 16]
 [org 0x7C00]
 
@@ -34,7 +25,7 @@ boot:
 packet:
 	db 16		; sizeof packet
 	db 0		; reserved
-	dw 0x67		; size (see build.py, line 104)
+	dw 0x67		; size (see build.py, line 108)
 	dw STAGE2	; buffer offset
 	dw 0		; buffer segment
 	dq 1		; starting lba

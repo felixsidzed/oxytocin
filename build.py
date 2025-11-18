@@ -1,12 +1,3 @@
-#
-# Created by felix on 9/26/2025.
-#
-
-# COPYRIGHT Fentanyl LLC 2025
-# v0.0.1-beta
-
-# MIT LICENSE
-
 import os
 import sys
 import subprocess
@@ -16,10 +7,12 @@ from tempfile import TemporaryDirectory
 CC = "x86_64-elf-gcc"
 AS = "nasm"
 LD = "x86_64-elf-ld"
+TEA = "./tea.exe" # https://github.com/felixsidzed/tea
 
 CCFLAGS = "-ffreestanding -std=gnu99 -O2 -Isrc -mcmodel=kernel -fno-stack-protector -mno-red-zone -Wall -Werror -include src/std/types.h -include src/common.h"
 ASFLAGS = ""
 LDFLAGS = "-nostd -T linker.ld"
+TEAFLAGS = "--triple x86_64-elf -v -64 -O0 -Isrc"
 
 QEMUFLAGS = "-net none -d int -no-reboot -cpu qemu64,+ssse3,+sse4.1,+sse4.2"
 
@@ -28,7 +21,7 @@ def run(cmd: str, wait=True, **kw) -> int:
 	if wait:
 		try:
 			return subprocess.check_call(cmd, shell=True, **kw)
-		except subprocess.CalledProcessError:
+		except subprocess.CalledProcessError as e:
 			sys.exit(1)
 			return 0
 	else:
@@ -37,7 +30,7 @@ def run(cmd: str, wait=True, **kw) -> int:
 
 def build(debug=False):
 	files = []
-	for ext in ("c", "s"):
+	for ext in ("c", "s"): # , "tea"
 		files.extend(glob(f"./**/*.{ext}", recursive=True))
 
 	print(f"found {len(files)} source files")
@@ -45,32 +38,28 @@ def build(debug=False):
 	objects = []
 	for file in files:
 		name, ext = file.rsplit(".", 1)
-		if ext != "s":
-			continue
 		name = os.path.basename(name)
+		if ext == "s":
+			out = os.path.join("build", f"{name}")
 
-		out = os.path.join("build", f"{name}")
-
-		if name in ("stage1", "stage2"):
-			run(f"{AS} {ASFLAGS} -f bin {file} -o {out}.bin")
+			if name in ("stage1", "stage2"):
+				run(f"{AS} {ASFLAGS} -f bin {file} -o {out}.bin")
+			else:
+				run(f"{AS} {ASFLAGS} -f elf64 {file} -o {out}.o")
+				out += ".o"
+				if name == "stage3": objects.insert(0, out)
+				else: objects.append(out)
+		elif ext == "tea":
+			out = os.path.join("build", f"{name}.o")
+			run(f"{TEA} {TEAFLAGS} {file} -o {out}")
+			objects.append(out)
 		else:
-			run(f"{AS} {ASFLAGS} -f elf64 {file} -o {out}.o")
-			out += ".o"
-			if name == "stage3": objects.insert(0, out)
-			else: objects.append(out)
-
-	for file in files:
-		name, ext = file.rsplit(".", 1)
-		if ext != "c":
-			continue
-		name = os.path.basename(name)
-
-		out = os.path.join("build", f"{name}.o")
-		if debug:
-			run(f"{CC} {CCFLAGS} -ggdb -c {file} -o {out}")
-		else:
-			run(f"{CC} {CCFLAGS} -c {file} -o {out}")
-		objects.append(out)
+			out = os.path.join("build", f"{name}.o")
+			if debug:
+				run(f"{CC} {CCFLAGS} -g -c {file} -o {out}")
+			else:
+				run(f"{CC} {CCFLAGS} -c {file} -o {out}")
+			objects.append(out)
 
 	iso = os.path.join("build", "os.iso")
 	stage1 = os.path.join("build", "stage1.bin")
@@ -118,7 +107,7 @@ def build(debug=False):
 				chunk = f.read(24)
 				offset = 0x20 + chunk.find((0x67).to_bytes(2, "little"))
 				if offset == 0x1F:
-					print("packet.size offset not found (is the size 0xB0B7?)")
+					print("packet.size offset not found (is the size 0x67?)")
 					sys.exit(1)
 				print(f"packet.size at {offset:#x}")
 				f.seek(offset)

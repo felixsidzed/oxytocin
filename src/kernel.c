@@ -1,28 +1,19 @@
-//
-// Created by felix on 9/26/2025.
-//
-
-// COPYRIGHT Fentanyl LLC 2025
-// v0.0.1-beta
-
-// MIT LICENSE
-
-#include "std/mem.h"
 #include "vga/vga.h"
+#include "heap/heap.h"
 #include "interrupts/isr.h"
 #include "interrupts/idt.h"
+#include "physmem/physmem.h"
 
-#define PAGE_PRESENT 1
-#define PAGE_READWRITE 2
-#define PAGE_ACCESSED 32
-
-// so kernel.bin has credits
-const char __credits[] __attribute__((section(".credits"))) = "//\n// Created by felix on 9/26/2025.\n//\n\n// COPYRIGHT Fentanyl LLC 2025\n// v0.0.1-beta\n\n// MIT LICENSE";
+#include "std/mem.h"
 
 void kmain() {
 	vga_cls();
 	idt_init();
-	vmm_init();
+	// TODO: Get the number of pages based on the E820 map
+	pmm_init(16 * 0x1000);
 
-	puts("puts");
+	Heap* heap = heap_create(4096);
+	char* p = heap_alloc(heap, 15);
+	memcpy(p, "Hello, World!", 14);
+	puts(p);
 }

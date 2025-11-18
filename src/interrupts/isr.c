@@ -1,12 +1,3 @@
-//
-// Created by felix on 9/26/2025.
-//
-
-// COPYRIGHT Fentanyl LLC 2025
-// v0.0.1-beta
-
-// MIT LICENSE
-
 #include "isr.h"
 
 #include "idt.h"
@@ -14,7 +5,7 @@
 #include "vga/vga.h"
 #include "drivers/io.h"
 
-static isr_t oxy_nobss handlers[256];
+static ISR oxy_nobss handlers[256];
 
 static const char* exceptionMessages[32] = {
 	"EXCEPTION_DIVIDE_BY_ZERO",
@@ -51,7 +42,7 @@ static const char* exceptionMessages[32] = {
 	"EXCEPTION_RESERVED_31"
 };
 
-void isr_init(void) {
+void isr_init() {
 	memset(handlers, 0, sizeof(handlers));
 	
 	outb(PIC1_CMD, 0x11);
@@ -66,18 +57,18 @@ void isr_init(void) {
 	outb(PIC2_DATA, 0x00);
 }
 
-void isr_register(uint8_t n, isr_t f) {
+void isr_register(uint8_t n, ISR f) {
 	handlers[n] = f;
 }
 
 static const char hexDigits[] = "0123456789ABCDEF";
 
-void isr_handler(context_t* ctx) {
-	isr_t f = handlers[ctx->int_no];
-	if (f) {
+void isr_handler(Context* ctx) {
+	ISR f = handlers[ctx->interruptNumber];
+	if (f)
 		f(ctx);
-	} else {
-		vga_setcolor(15, 1);
+	else {
+		vga_setColor(15, 1);
 		vga_cls();
 
 		puts(
@@ -90,23 +81,22 @@ void isr_handler(context_t* ctx) {
 			"\n\n"
 			"     "
 		);
-		puts(exceptionMessages[ctx->int_no]);
-		putch(' '), putch('(');
-		putch('0'), putch('x');
+		puts(exceptionMessages[ctx->interruptNumber]);
+		putchar(' '), putchar('(');
+		putchar('0'), putchar('x');
 		for (int i = 28; i >= 0; i -= 4)
-			putch(hexDigits[(ctx->int_no >> i) & 0xF]);
-		putch(')');
+			putchar(hexDigits[(ctx->interruptNumber >> i) & 0xF]);
+		putchar(')');
 
 		asm("hlt");
 	}
 }
 
-void irq_handler(context_t* ctx) {
-	if (ctx->int_no >= 40)
+void irq_handler(Context* ctx) {
+	if (ctx->interruptNumber >= 40)
 		outb(PIC2_CMD, PIC_EOI);
 	outb(PIC1_CMD, PIC_EOI);
 	
-	isr_t f = handlers[ctx->int_no];
-	if (f)
-		f(ctx);
+	ISR f = handlers[ctx->interruptNumber];
+	if (f) f(ctx);
 }

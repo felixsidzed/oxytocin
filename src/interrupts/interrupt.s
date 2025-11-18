@@ -1,12 +1,3 @@
-;
-; Created by felix on 9/26/2025.
-;
-
-; COPYRIGHT Fentanyl LLC 2025
-; v0.0.1-beta
-
-; MIT LICENSE
-
 [bits 64]
 section .text
 
@@ -18,14 +9,14 @@ extern irq_handler
 	isr%1:
 		push 0
 		push %1
-		jmp isr_common_stub
+		jmp isrCommonStub
 %endmacro
 
 %macro ISR 1
 	global isr%1
 	isr%1:
 		push %1
-		jmp isr_common_stub
+		jmp isrCommonStub
 %endmacro
 
 %macro IRQ 2
@@ -33,7 +24,7 @@ extern irq_handler
 	irq%1:
 		push 0
 		push %2
-		jmp irq_common_stub
+		jmp irqCommonStub
 %endmacro
 
 ISR_NOERR 0
@@ -86,7 +77,7 @@ IRQ 13, 45
 IRQ 14, 46
 IRQ 15, 47
 
-isr_common_stub:
+isrCommonStub:
 	push rax
 	push rcx
 	push rdx
@@ -125,7 +116,7 @@ isr_common_stub:
 	add rsp, 16
 	iretq
 
-irq_common_stub:
+irqCommonStub:
 	push rax
 	push rcx
 	push rdx
