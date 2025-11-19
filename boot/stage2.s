@@ -3,19 +3,19 @@
 
 stage2:
 	cli
-	lgdt [gdtr]
+	lgdt [gdtr32]
 
 	mov eax, cr0
 	or eax, 1
 	mov cr0, eax
 
-	jmp CS32:pm
+	jmp 0x08:pm
 
 %include "boot/gdt.inc"
 
 [bits 32]
 pm:
-	mov ax, DS32
+	mov ax, 0x10
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
@@ -91,11 +91,13 @@ pm:
 	or eax, 1 << 8
 	wrmsr
 
+	lgdt [gdtr64]
+
 	mov eax, cr0
 	or eax, 1 << 31
 	mov cr0, eax
 	
-	jmp CS64:lm
+	jmp 0x08:lm
 
 .err:
 	mov esi, err
@@ -117,7 +119,7 @@ pm:
 
 [bits 64]
 lm:
-	mov ax, DS64
+	mov ax, 0x10
     mov ds, ax
     mov es, ax
     mov fs, ax

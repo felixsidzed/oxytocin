@@ -56,9 +56,17 @@ extern void irq14();
 extern void irq15();
 
 void idt_init() {
-	memset(idt, 0, sizeof(idt));
+	for (int i = 0; i < 256; i++) {
+		idt[i].low = 0;
+		idt[i].sel = 0;
+		idt[i].ist = 0;
+		idt[i].attr = 0;
+		idt[i].mid = 0;
+		idt[i].high = 0;
+		idt[i].reserved = 0;
+	}
 	
-	desc.limit = sizeof(idt) - 1;
+	desc.limit = (256 * sizeof(IDTEntry)) - 1;
 	desc.base = (uintptr_t)&idt;
 	
 	idt_setGate(0, (uintptr_t)isr0, IDT_INTERRUPT_GATE);
@@ -121,7 +129,7 @@ void idt_setGate(uint8_t num, uintptr_t handler, uint8_t flags) {
 	idt[num].low = handler & 0xFFFF;
 	idt[num].mid = (handler >> 16) & 0xFFFF;
 	idt[num].high = (handler >> 32) & 0xFFFFFFFF;
-	idt[num].sel = KERNEL_CS;
+	idt[num].sel = 0x08;
 	idt[num].ist = 0;
 	idt[num].attr = flags;
 	idt[num].reserved = 0;

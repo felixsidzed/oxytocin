@@ -1,7 +1,5 @@
 #pragma once
 
-#define KERNEL_CS 0x18
-
 typedef struct {
 	uint16_t low;
 	uint16_t sel;
@@ -15,7 +13,7 @@ typedef struct {
 typedef struct {
 	uint16_t limit;
 	uint64_t base;
-} IDTR;
+} __attribute__((packed)) IDTR;
 
 #define IDT_INTERRUPT_GATE 0x8E
 #define IDT_TRAP_GATE 0x8F
