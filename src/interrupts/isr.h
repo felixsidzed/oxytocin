@@ -15,5 +15,10 @@ typedef struct {
 
 typedef void (*ISR)(Context* ctx);
 
+/// @brief Initializes the interrupt service routine system
 void isr_init();
+
+/// @brief Registers an interrupt handler for a specific interrupt number
+/// @param n Interrupt number to handle
+/// @param handler Function pointer to the ISR
 void isr_register(uint8_t n, ISR handler);

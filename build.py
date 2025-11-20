@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 CC = "x86_64-elf-gcc"
 AS = "nasm"
 LD = "x86_64-elf-ld"
+QEMU = "qemu-system-x86_64"
 TEA = "./tea.exe" # https://github.com/felixsidzed/tea
 
 CCFLAGS = "-ffreestanding -std=gnu99 -O2 -Isrc -mcmodel=kernel -fno-stack-protector -mno-red-zone -Wall -Werror -include src/std/types.h -include src/common.h"
@@ -14,7 +15,7 @@ ASFLAGS = ""
 LDFLAGS = "-nostd -T linker.ld"
 TEAFLAGS = "--triple x86_64-elf -v -64 -O0 -Isrc"
 
-QEMUFLAGS = "-net none -d int -no-reboot -cpu qemu64,+ssse3,+sse4.1,+sse4.2"
+QEMUFLAGS = "-net none -cpu qemu64,+ssse3,+sse4.1,+sse4.2"
 
 def run(cmd: str, wait=True, **kw) -> int:
 	print(cmd)
@@ -127,9 +128,9 @@ def main(argv) -> int:
 		return 0
 
 	if argv[1] == "run":
-		return run(f"qemu-system-x86_64 -hdd {iso} {QEMUFLAGS}")
+		return run(f"{QEMU} -hdd {iso} {QEMUFLAGS}")
 	elif argv[1] == "debug":
-		run(f"qemu-system-x86_64 -hdd {iso} {QEMUFLAGS} -s -S", False)
+		run(f"{QEMU} -hdd {iso} -d int {QEMUFLAGS} -s -S", False)
 		return run(f"gdb -ex 'target remote localhost:1234' {os.path.join('build', 'kernel.elf')}", True)
 	
 	return 0

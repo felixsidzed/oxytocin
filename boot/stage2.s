@@ -89,6 +89,7 @@ pm:
 	mov ecx, 0xC0000080
 	rdmsr
 	or eax, 1 << 8
+	or eax, 1 << 11
 	wrmsr
 
 	lgdt [gdtr64]
@@ -96,6 +97,10 @@ pm:
 	mov eax, cr0
 	or eax, 1 << 31
 	mov cr0, eax
+
+	mov     eax, cr0
+	or      eax, 0x00010000
+	mov     cr0, eax 
 	
 	jmp 0x08:lm
 
@@ -120,11 +125,11 @@ pm:
 [bits 64]
 lm:
 	mov ax, 0x10
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+	mov ss, ax
 
 	jmp KERNEL
 
