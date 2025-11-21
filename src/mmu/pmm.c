@@ -24,8 +24,8 @@ static uintptr_t* fetchPte(void* addr) {
 	uintptr_t va = (uintptr_t)addr;
 	size_t id0 = (va >> 39) & 0x1FF;
 	size_t id1 = (va >> 30) & 0x1FF;
-	size_t id2   = (va >> 21) & 0x1FF;
-	size_t id3   = (va >> 12) & 0x1FF;
+	size_t id2 = (va >> 21) & 0x1FF;
+	size_t id3 = (va >> 12) & 0x1FF;
 
 	uintptr_t* pdpt = (uintptr_t*)(pml4[id0] & ~0xFFF);
 	if (!pdpt) return 0;
@@ -123,12 +123,10 @@ uint32_t pmm_protect(void* addr, uint32_t prot) {
 	uint32_t old = pmm_getProtection(addr);
 
 	if (prot & PAGE_WRITE)		entry |= PAGE_WRITE;
-	else							entry &= ~PAGE_WRITE;
+	else						entry &= ~PAGE_WRITE;
 	if (prot & PAGE_EXECUTE)	entry &= ~(1uLL<<63);
-	else							entry |= 1uLL<<63;
-
-	if (prot != PAGE_NOACCESS)
-		entry |= PAGE_READ;
+	else						entry |= 1uLL<<63;
+	if (prot != PAGE_NOACCESS)	entry |= PAGE_READONLY; // writeonly pages dont exist
 
 	*pte = entry;
 	asm volatile("invlpg (%0)" :: "r"(addr) : "memory");
@@ -141,7 +139,7 @@ uint32_t pmm_getProtection(void* addr) {
 		return 0;
 	
 	uint32_t prot = *pte & 0xFFF;
-	if (*pte & (1ULL << 63))
+	if (*pte & (1uLL << 63))
 		prot |= PAGE_EXECUTE;
 	return prot;
 }

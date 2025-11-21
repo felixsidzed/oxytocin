@@ -1,15 +1,14 @@
 #include "isr.h"
 
-#include "idt.h"
-
+#include <panic.h>
 #include <string.h>
-#include "std/panic.h"
+#include <oxystatus.h>
 
-#include "vga/vga.h"
-
-#include "drivers/io.h"
-
+#include "idt.h"
 #include "mmu/pmm.h"
+#include "vga/vga.h"
+#include "drivers/io.h"
+#include "proc/process.h"
 
 static ISR oxy_data handlers[256];
 
@@ -32,12 +31,64 @@ void isr_register(uint8_t n, ISR f) {
 	handlers[n] = f;
 }
 
+extern void scheduler_step(Context* ctx);
+
 void isr_handler(Context* ctx) {
 	ISR f = handlers[ctx->interruptNumber];
 	if (f)
 		f(ctx);
 	else {
-		kpanic_ctx(ctx, "Unhandled exception: 0x%llx", ctx->interruptNumber);
+		Process* proc = process_getCurrent();
+		if (proc->pid) {
+			// TODO: Log this
+			// TODO: Call handler if available
+
+			// we cant use process_exit() because it expects pit to be active
+			proc->state = PROCESS_STATE_ZOMBIE;
+			switch (ctx->interruptNumber) {
+				case 0x00:
+					ctx->rax = STATUS_DIVIDE_BY_ZERO;
+					break;
+				case 0x01:
+					ctx->rax = STATUS_DBG_SINGLESTEP;
+					break;
+				case 0x03:
+					ctx->rax = STATUS_DBG_BREAKPOINT;
+					break;
+				case 0x04:
+					ctx->rax = STATUS_OVERFLOW;
+					break;
+				case 0x06:
+					ctx->rax = STATUS_INVALID_OPCODE;
+					break;
+				case 0x07:
+					ctx->rax = STATUS_NO_COPROCESSOR;
+					break;
+				case 0x09:
+					ctx->rax = STATUS_COPROC_OVERRUN;
+					break;
+				case 0x0A:
+					ctx->rax = STATUS_INVALID_TSS;
+					break;
+				case 0x0B:
+					ctx->rax = STATUS_MISSING_SEGMENT;
+					break;
+
+				case 0x0E:
+					if (ctx->errorCode & 1)
+						ctx->rax = STATUS_ACCESS_VIOLATION;
+					else
+						ctx->rax = STATUS_PAGE_FAULT;
+					break;
+
+				default:
+					ctx->rax = -1;
+					break;
+			}
+			proc->ctx.rax = ctx->rax;
+			scheduler_step(ctx);
+		} else
+			kpanic_ctx(ctx, "Unhandled exception: 0x%llx", ctx->interruptNumber);
 	}
 }
 

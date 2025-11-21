@@ -10,7 +10,7 @@ static oxy_data Process* tail = nullptr;
 static oxy_data Process* current = nullptr;
 
 void process_init() {
-	process_create("sysidl", nullptr);
+	process_create("sysidle", nullptr);
 }
 
 Process* process_create(const char* name, void(*entry)()) {
@@ -24,15 +24,12 @@ Process* process_create(const char* name, void(*entry)()) {
 		return nullptr;
 	}
 
-	if (head) proc->pid = head->pid + 1;
+	if (head) proc->pid = tail->pid + 1;
 	else proc->pid = 0;
 
 	proc->state = PROCESS_STATE_READY;
 	
-	int i = 0;
-	while (*name && i < 7)
-		proc->name[i++] = *name++;
-
+	proc->name = name; // name is always owned
 	proc->ctx.cs = 0x08;
 	proc->ctx.ss = 0x10;
 	proc->stack = (uintptr_t)stack;
@@ -57,31 +54,51 @@ Process* process_create(const char* name, void(*entry)()) {
 
 // TODO: Improve
 oxy_noret process_exit(int ec) {
-	if (current->pid)
-		current->state = PROCESS_STATE_TERMINATED;
+	// we cant terminate the current process cuz its running
+	if (current->pid) {
+		current->ctx.rax = ec;
+		current->state = PROCESS_STATE_ZOMBIE;
+	}
 
+	// wait for re-schedule
 	while (true)
 		asm volatile("hlt");
+}
+
+Process* process_getCurrent() {
+	return current;
 }
 
 void scheduler_step(Context* ctx) {
 	if (!current)
 		return;
 
-	memcpy(&current->ctx, ctx, sizeof(Context));
+	Process* toFree = nullptr;
+	Process* next = current->next;
 
-	if (current->state == PROCESS_STATE_TERMINATED) {
-		Process* next = current->next;
+	// reaper
+	if (current->state == PROCESS_STATE_ZOMBIE && current->pid) {
+		Process* prev = head;
+		while (prev->next != current)
+			prev = prev->next;
+		prev->next = current->next;
 
-		kfree((void*)current->stack);
-		kfree(current);
+		if (current == tail)
+			tail = prev;
 
+		toFree = current; // we have to defer ts cuz we are using the process's context rn
 		current = next;
 	} else {
+		memcpy(&current->ctx, ctx, sizeof(Context));
 		current->state = PROCESS_STATE_READY;
-		current = current->next;
+		current = next;
 	}
 
 	current->state = PROCESS_STATE_RUNNING;
 	memcpy(ctx, &current->ctx, sizeof(Context));
+
+	if (toFree) {
+        freepages((void*)toFree->stack, PROCESS_STACK_SIZE / 0x1000);
+        kfree(toFree);
+    }
 }

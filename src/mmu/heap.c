@@ -9,7 +9,7 @@ Heap* heap_create(size_t size) {
 
 	size = (size + 0xFFF) & ~0xFFF;
 
-	Heap* heap = allocpages(size / 0x1000, PAGE_READ | PAGE_WRITE);
+	Heap* heap = allocpages(size / 0x1000, PAGE_READWRITE);
 	if (!heap)
 		return nullptr;
 

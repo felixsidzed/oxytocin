@@ -2,13 +2,15 @@
 [org 0x7C00]
 
 boot:
+	; load 2nd stage and kernel from disk
 	mov bx, 2
 	mov ah, 0x42
 	mov si, packet
 	int 0x13
 	jc .err
 
-	jmp 0x0000:STAGE2
+	; jump to 2nd stage
+	jmp 0x0000:0x7E00
 
 .err:
 	mov si, err
@@ -25,12 +27,10 @@ boot:
 packet:
 	db 16		; sizeof packet
 	db 0		; reserved
-	dw 0x67		; size (see build.py, line 108)
-	dw STAGE2	; buffer offset
+	dw 0x67		; size (see build.py, line 109)
+	dw 0x7E00	; buffer offset
 	dw 0		; buffer segment
 	dq 1		; starting lba
-
-STAGE2 equ 0x7E00
 
 err db 'ERRDISK', 0
 drive: db 0x00

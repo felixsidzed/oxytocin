@@ -128,7 +128,7 @@ def main(argv) -> int:
 		return 0
 
 	if argv[1] == "run":
-		return run(f"{QEMU} -hdd {iso} {QEMUFLAGS}")
+		return run(f"{QEMU} -hdd {iso} {QEMUFLAGS} {' '.join(sys.argv[2:])}")
 	elif argv[1] == "debug":
 		run(f"{QEMU} -hdd {iso} -d int {QEMUFLAGS} -s -S", False)
 		return run(f"gdb -ex 'target remote localhost:1234' {os.path.join('build', 'kernel.elf')}", True)

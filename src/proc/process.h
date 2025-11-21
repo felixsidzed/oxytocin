@@ -7,7 +7,7 @@
 #define PROCESS_STATE_READY			0
 #define PROCESS_STATE_RUNNING		1
 #define PROCESS_STATE_BLOCKED		2
-#define PROCESS_STATE_TERMINATED	3
+#define PROCESS_STATE_ZOMBIE		3
 
 /// TODO: Multi-threading
 typedef struct Process {
@@ -15,7 +15,7 @@ typedef struct Process {
 
 	uint8_t state;
 	
-	char name[8];
+	const char* name;
 
 	Context ctx;
 	uintptr_t stack;
@@ -37,3 +37,14 @@ Process* process_create(const char* name, void(*entry)());
 /// @note This function does not return
 /// @note This function only marks the process for deletion, it will be free'd the next scheduler step
 void process_exit(int ec);
+
+/// @brief 
+/// @return 
+Process* process_getCurrent();
+
+/// @brief 
+/// @param proc 
+/// @return 
+static inline int process_getExitCode(Process* proc) {
+	return proc->state == PROCESS_STATE_ZOMBIE ? (int)proc->ctx.rax : 0;
+}

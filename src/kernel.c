@@ -1,4 +1,6 @@
 #include <string.h>
+#include <kprintf.h>
+#include <oxystatus.h>
 
 #include "vga/vga.h"
 
@@ -18,27 +20,31 @@ void kinit() {
 	idt_init();
 	isr_init();
 	pmm_init();
-	kheap_init(8 * 0x1000);
+	kheap_init(2 * 0x1000);
 	
 	timer_init(100);
 	process_init();
 }
 
 void proc1() {
-	puts("Hello, World!\n");
-	process_exit(0);
-}
-
-void proc2() {
-	puts("Hello, EVIL World!\n");
-	process_exit(0);
+	int* page = allocpage(PAGE_READONLY);
+	// this will cause a page fault
+	*(int*)page = 13879; // '67'
+	process_exit(67);
 }
 
 void kmain() {
 	kinit();
 
-	process_create("proc1", proc1);
-	process_create("proc2", proc2);
+	Process* proc = process_create("proc1", proc1);
+	// TODO: Proper way of waiting for a process to finish
+	timer_sleep(16);
+	
+	// see /src/std/oxystatus.h
+	if (process_getExitCode(proc) == STATUS_ACCESS_VIOLATION) {
+		puts("proc1 caused an access violation\n");
+	} else
+		puts("proc1 exited normally\n");
 
 	while (true)
 		asm volatile ("hlt");
