@@ -38,7 +38,6 @@ void kmain() {
 	kinit();
 
 	process_create("proc1", proc1);
-	timer_sleep(32);
 	process_create("proc2", proc2);
 
 	while (true)
