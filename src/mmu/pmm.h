@@ -2,11 +2,14 @@
 
 #define MAX_PAGES 0x200
 
-#define PAGE_PROT_NOACCESS	0
-#define PAGE_PROT_READ		1
-#define PAGE_PROT_WRITE		2
-#define PAGE_PROT_EXECUTE	4
-#define PAGE_PROT_ALL		(PAGE_PROT_READ | PAGE_PROT_WRITE | PAGE_PROT_EXECUTE)
+#define PAGE_NOACCESS	0
+#define PAGE_READ		1
+#define PAGE_WRITE		2
+#define PAGE_EXECUTE	4
+
+#define PAGE_READ_EXECUTE		PAGE_EXECUTE
+#define PAGE_READWRITE			(PAGE_WRITE | PAGE_EXECUTE)
+#define PAGE_READWRITE_EXECUTE	(PAGE_READ | PAGE_WRITE | PAGE_EXECUTE)
 
 /// @brief Initializes the physical memory manager with the given memory size
 void pmm_init();

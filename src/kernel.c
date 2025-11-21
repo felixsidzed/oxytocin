@@ -1,16 +1,17 @@
-#include "std/mem.h"
+#include <string.h>
 
 #include "vga/vga.h"
 
-#include "heap/heap.h"
-#include "heap/kheap.h"
+#include "mmu/pmm.h"
+#include "mmu/heap.h"
+#include "mmu/kheap.h"
 
 #include "interrupts/isr.h"
 #include "interrupts/idt.h"
 
-#include "physmem/physmem.h"
-
 #include "drivers/timer.h"
+
+#include "proc/process.h"
 
 void kinit() {
 	vga_cls();
@@ -20,24 +21,27 @@ void kinit() {
 	kheap_init(8 * 0x1000);
 	
 	timer_init(100);
+	process_init();
+}
+
+void proc1() {
+	puts("Hello, World!\n");
+	process_exit(0);
+}
+
+void proc2() {
+	puts("Hello, EVIL World!\n");
+	process_exit(0);
 }
 
 void kmain() {
-    kinit();
+	kinit();
 
-	char* a = allocpage(PAGE_PROT_WRITE);
-	*a = 'A';
-	pmm_protect(a, PAGE_PROT_READ);
-	//*a = 'B'; // will page fault
-	putchar(*a);
+	process_create("proc1", proc1);
+	timer_sleep(32);
+	process_create("proc2", proc2);
 
-	char* b = kmalloc(1);
-	*b = 0xC3;
-
-	//pmm_protect(b, PAGE_PROT_EXECUTE);
-	//((void(*)())b)(); // will page fault unless the line above is uncommented
-
-    while (true)
-        asm volatile ("hlt");
+	while (true)
+		asm volatile ("hlt");
 }
 

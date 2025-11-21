@@ -1,4 +1,4 @@
-#include "printf.h"
+#include <kprintf.h>
 
 #include "vga/vga.h"
 

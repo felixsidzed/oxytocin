@@ -1,6 +1,6 @@
-#include "physmem.h"
+#include "pmm.h"
 
-#include "std/mem.h"
+#include <string.h>
 
 extern uintptr_t __ld_kernel_end;
 
@@ -72,6 +72,9 @@ void* allocpages(uint32_t npages, uint32_t prot) {
 	if (npages == 0 || freePages < npages)
 		return 0;
 
+	if (npages == 1)
+		return allocpage(prot);
+
 	for (size_t i = 0; i <= totalPages - npages; i++) {
 		size_t j;
 		for (j = 0; j < npages; j++) {
@@ -100,7 +103,7 @@ void freepage(void* addr) {
 	if (page >= totalPages || isFree(page))
 		return;
 
-	pmm_protect(addr, PAGE_PROT_NOACCESS);
+	pmm_protect(addr, PAGE_NOACCESS);
 	markFree(page);
 	freePages++;
 	usedPages--;
@@ -119,14 +122,13 @@ uint32_t pmm_protect(void* addr, uint32_t prot) {
 	uintptr_t entry = *pte;
 	uint32_t old = pmm_getProtection(addr);
 
-	if (prot & PAGE_PROT_WRITE)		entry |= PAGE_PROT_WRITE;
-	else							entry &= ~PAGE_PROT_WRITE;
-	if (prot & PAGE_PROT_EXECUTE)	entry &= ~(1uLL<<63);
+	if (prot & PAGE_WRITE)		entry |= PAGE_WRITE;
+	else							entry &= ~PAGE_WRITE;
+	if (prot & PAGE_EXECUTE)	entry &= ~(1uLL<<63);
 	else							entry |= 1uLL<<63;
 
-	// we can't make a page write-only :C
-	if (prot != PAGE_PROT_NOACCESS)
-		entry |= PAGE_PROT_READ;
+	if (prot != PAGE_NOACCESS)
+		entry |= PAGE_READ;
 
 	*pte = entry;
 	asm volatile("invlpg (%0)" :: "r"(addr) : "memory");
@@ -140,7 +142,7 @@ uint32_t pmm_getProtection(void* addr) {
 	
 	uint32_t prot = *pte & 0xFFF;
 	if (*pte & (1ULL << 63))
-		prot |= PAGE_PROT_EXECUTE;
+		prot |= PAGE_EXECUTE;
 	return prot;
 }
 

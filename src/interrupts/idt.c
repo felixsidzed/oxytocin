@@ -1,6 +1,6 @@
 #include "idt.h"
 #include "isr.h"
-#include "std/mem.h"
+#include <string.h>
 
 static IDTR oxy_data desc;
 static IDTEntry oxy_data idt[256];

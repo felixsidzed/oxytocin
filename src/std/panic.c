@@ -2,9 +2,9 @@
 
 #include "vga/vga.h"
 
-#include "stdarg.h"
-#include "std/mem.h"
-#include "std/printf.h"
+#include <stdarg.h>
+#include <string.h>
+#include <kprintf.h>
 
 #include "drivers/io.h"
 #include "drivers/keyboard.h"
@@ -116,8 +116,8 @@ oxy_noret kpanic(const char* message, ...) {
         "mov %%rcx, 0x68(%0)\n"
         "mov %%rax, 0x70(%0)\n"
 
-        "mov $0,  0x78(%0)\n"
-        "mov $0,  0x80(%0)\n"
+        "movq $0,  0x78(%0)\n"
+        "movq $0,  0x80(%0)\n"
 
         "mov (%%rsp), %%rax\n"
         "mov %%rax, 0x88(%0)\n"

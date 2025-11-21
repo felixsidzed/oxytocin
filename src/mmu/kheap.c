@@ -1,7 +1,7 @@
 #include "kheap.h"
 
-#include "std/mem.h"
-#include "heap/heap.h"
+#include <string.h>
+#include "mmu/heap.h"
 
 Heap* oxy_data kheap = nullptr;
 

@@ -9,7 +9,6 @@ static uint16_t oxy_data cy = 0;
 static uint16_t* buf = (uint16_t*)0xB8000;
 
 #define vga_putentry(i, ch) buf[(i)] = ((uint8_t)(ch) | col << 8)
-#define vga_updcursor()
 
 void vga_cls() {
 	for (uint32_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)

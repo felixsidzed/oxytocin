@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdarg.h"
+#include <stdarg.h>
 
 /// @brief Prints a formatted string to the kernel console
 /// @param fmt The format string

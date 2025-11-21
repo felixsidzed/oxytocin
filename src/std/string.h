@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include <stdint.h>
 
 #define isalpha(c) (((c) >= 'A' && (c) <= 'Z') || ((c) >= 'a' && (c) <= 'z'))
 #define isdigit(c) ((c) >= '0' && (c) <= '9')

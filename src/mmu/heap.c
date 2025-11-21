@@ -1,7 +1,7 @@
 #include "heap.h"
 
-#include "std/mem.h"
-#include "physmem/physmem.h"
+#include <string.h>
+#include "mmu/pmm.h"
 
 Heap* heap_create(size_t size) {
 	if (size == 0)
@@ -9,7 +9,7 @@ Heap* heap_create(size_t size) {
 
 	size = (size + 0xFFF) & ~0xFFF;
 
-	Heap* heap = allocpages(size / 0x1000, PAGE_PROT_READ | PAGE_PROT_WRITE);
+	Heap* heap = allocpages(size / 0x1000, PAGE_READ | PAGE_WRITE);
 	if (!heap)
 		return nullptr;
 
@@ -89,7 +89,7 @@ void* heap_alloc(Heap* heap, size_t size) {
 	heap->usedBytes += entry->size;
 
 	void* ptr = (void*)((uint8_t*)entry + sizeof(HeapEntry));
-	memset(ptr, 0x0, size);
+	memset(ptr, 0, size);
 
 	return ptr;
 }
