@@ -1,2 +1,2 @@
 # oxytocin
-An operating system built from scratch
+Oxytocin is a tiny operating system built from scratch
