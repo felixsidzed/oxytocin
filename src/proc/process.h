@@ -1,7 +1,5 @@
 #pragma once
 
-#include "interrupts/isr.h"
-
 #define PROCESS_STACK_SIZE 4096
 
 #define PROCESS_STATE_READY			0
@@ -9,17 +7,28 @@
 #define PROCESS_STATE_BLOCKED		2
 #define PROCESS_STATE_ZOMBIE		3
 
-/// TODO: Multi-threading
-typedef struct Process {
-	uint32_t pid;
+typedef uint32_t pid_t;
 
-	uint8_t state;
+typedef struct {
+	uintptr_t r15, r14, r13, r12, r11, r10, r9, r8;
+	uintptr_t rdi, rsi, rbp, rbx, rdx, rcx, rax;
 	
+	uintptr_t rip, rsp, rflags;
+} Context;
+
+typedef struct Process {
+	uint32_t id : 24;
+	uint32_t state : 2;
+	uint32_t flags : 6;
+
+	/// TODO: we could move this to `Context::rdi`
+	int ec;
+	void* stack;
 	const char* name;
-
+	
 	Context ctx;
-	uintptr_t stack;
 
+	struct Process* parent;
 	struct Process* next;
 } Process;
 
@@ -38,13 +47,8 @@ Process* process_create(const char* name, void(*entry)());
 /// @note This function only marks the process for deletion, it will be free'd the next scheduler step
 void process_exit(int ec);
 
-/// @brief 
-/// @return 
+/// @brief Retrieves a pointer to the currently running process
+/// @return A pointer to the `Process` structure representing the current process
 Process* process_getCurrent();
 
-/// @brief 
-/// @param proc 
-/// @return 
-static inline int process_getExitCode(Process* proc) {
-	return proc->state == PROCESS_STATE_ZOMBIE ? (int)proc->ctx.rax : 0;
-}
+int process_wait(Process* proc);

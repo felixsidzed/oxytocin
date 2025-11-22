@@ -7,9 +7,10 @@
 #include <kprintf.h>
 
 #include "drivers/io.h"
+#include "proc/process.h"
 #include "drivers/keyboard.h"
 
-oxy_noret kvpanic(Context* ctx, const char* message, va_list va) {
+oxy_noret kvpanic(ISRContext* ctx, const char* message, va_list va) {
 	asm volatile ("cli");
 
 	vga_setColor(7, 0);
@@ -47,7 +48,7 @@ oxy_noret kvpanic(Context* ctx, const char* message, va_list va) {
 					ctx->rip, ctx->rsp, ctx->interruptNumber, ctx->errorCode
 				);
 			else if (streq(tmp, "regs")) {
-                kprintf(
+				kprintf(
 					"RAX: %p  RBX: %p  RCX: %p  RDX: %p  RSI: %p  RDI: %p  RBP: %p\n",
 					ctx->rax, ctx->rbx, ctx->rcx, ctx->rdx, ctx->rsi, ctx->rdi, ctx->rbp
 				);
@@ -98,46 +99,15 @@ oxy_noret kvpanic(Context* ctx, const char* message, va_list va) {
 }
 
 oxy_noret kpanic(const char* message, ...) {
-	Context ctx;
-    asm volatile(
-        "mov %%r15, 0x00(%0)\n"
-        "mov %%r14, 0x08(%0)\n"
-        "mov %%r13, 0x10(%0)\n"
-        "mov %%r12, 0x18(%0)\n"
-        "mov %%r11, 0x20(%0)\n"
-        "mov %%r10, 0x28(%0)\n"
-        "mov %%r9,  0x30(%0)\n"
-        "mov %%r8,  0x38(%0)\n"
-        "mov %%rdi, 0x40(%0)\n"
-        "mov %%rsi, 0x48(%0)\n"
-        "mov %%rbp, 0x50(%0)\n"
-        "mov %%rbx, 0x58(%0)\n"
-        "mov %%rdx, 0x60(%0)\n"
-        "mov %%rcx, 0x68(%0)\n"
-        "mov %%rax, 0x70(%0)\n"
+	ISRContext ctx;
+	Context* pctx = &process_getCurrent()->ctx;
+	memcpy(&ctx, pctx, sizeof(uintptr_t)*15); // copy general purpose registers
 
-        "movq $0,  0x78(%0)\n"
-        "movq $0,  0x80(%0)\n"
+	ctx.interruptNumber = ctx.errorCode = 0;
 
-        "mov (%%rsp), %%rax\n"
-        "mov %%rax, 0x88(%0)\n"
-
-        "mov %%cs, %%rax\n"
-        "mov %%rax, 0x90(%0)\n"
-
-        "pushfq\n"
-        "popq %%rax\n"
-        "mov %%rax, 0x98(%0)\n"
-
-        "mov %%rsp, 0xa0(%0)\n"
-
-        "mov %%ss, %%rax\n"
-        "mov %%rax, 0xa8(%0)\n"
-
-        :
-        : "r"(&ctx)
-        : "rax", "memory"
-    );
+	ctx.rip = pctx->rip;
+	ctx.rsp = pctx->rsp;
+	ctx.rflags = pctx->rflags;
 
 	va_list va;
 	va_start(va, message);
@@ -146,7 +116,7 @@ oxy_noret kpanic(const char* message, ...) {
 	oxy_unreachable();
 }
 
-oxy_noret kpanic_ctx(Context* ctx, const char* message, ...) {
+oxy_noret kpanic_ctx(ISRContext* ctx, const char* message, ...) {
 	va_list va;
 	va_start(va, message);
 

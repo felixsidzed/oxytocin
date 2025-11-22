@@ -27,24 +27,16 @@ void kinit() {
 }
 
 void proc1() {
-	int* page = allocpage(PAGE_READONLY);
-	// this will cause a page fault
-	*(int*)page = 13879; // '67'
+	puts("Hello, World!\n");
+	
 	process_exit(67);
 }
 
 void kmain() {
 	kinit();
 
-	Process* proc = process_create("proc1", proc1);
-	// TODO: Proper way of waiting for a process to finish
-	timer_sleep(16);
-	
-	// see /src/std/oxystatus.h
-	if (process_getExitCode(proc) == STATUS_ACCESS_VIOLATION) {
-		puts("proc1 caused an access violation\n");
-	} else
-		puts("proc1 exited normally\n");
+	Process* p = process_create("proc1", proc1);
+	kprintf("%d\n", process_wait(p));
 
 	while (true)
 		asm volatile ("hlt");

@@ -27,4 +27,4 @@ void kpanic(const char* message, ...);
 /// - regs         : Dumps all general-purpose and some control registers
 /// - traceback    : Shows the current call stack
 /// - stack        : Displays the raw stack memory
-void kpanic_ctx(Context* ctx, const char* message, ...);
+void kpanic_ctx(ISRContext* ctx, const char* message, ...);

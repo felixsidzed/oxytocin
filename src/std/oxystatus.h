@@ -25,8 +25,7 @@ typedef uint16_t oxystatus;
 #define STATUS_CODE_BREAKPOINT	7
 #define STATUS_CODE_COSEGOR		8
 #define STATUS_CODE_NOSEG		9
-#define STATUS_CODE_PAGEFAULT	10
-#define STATUS_CODE_PROTFAULT	11
+#define STATUS_CODE_PAGEFAULT	11
 */
 
 /// Severity:	00 (SUCCESS)
@@ -84,12 +83,7 @@ typedef uint16_t oxystatus;
 /// Code:		09 (NOSEG)
 #define STATUS_MISSING_SEGMENT	(oxystatus)0x0913
 
-/// Severity:	03 (FATAL)
-/// Class:		04 (MEMORY)
-/// Code:		10 (PAGEFAULT)
-#define STATUS_PAGE_FAULT		(oxystatus)0x0A17
-
 /// Severity:	02 (ERROR)
 /// Class:		04 (MEMORY)
-/// Code:		11 (PROTFAULT)
+/// Code:		11 (PAGEFAULT)
 #define STATUS_ACCESS_VIOLATION	(oxystatus)0x0B16

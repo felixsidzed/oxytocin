@@ -5,6 +5,8 @@
 #include "mmu/pmm.h"
 #include "mmu/kheap.h"
 
+#include "interrupts/isr.h"
+
 static oxy_data Process* head = nullptr;
 static oxy_data Process* tail = nullptr;
 static oxy_data Process* current = nullptr;
@@ -18,49 +20,57 @@ Process* process_create(const char* name, void(*entry)()) {
 	if (!proc)
 		return nullptr;
 
+#if PROCESS_STACK_SIZE == 0x1000
+	char* stack = allocpage(PAGE_READWRITE);
+#else
 	char* stack = allocpages(PROCESS_STACK_SIZE / 0x1000, PAGE_READWRITE);
+#endif
 	if (!stack) {
 		kfree(proc);
 		return nullptr;
 	}
 
-	if (head) proc->pid = tail->pid + 1;
-	else proc->pid = 0;
+	if (tail) proc->id = tail->id + 1;
+	else proc->id = 0;
 
+	proc->ec = 0;
+	proc->name = name;
 	proc->state = PROCESS_STATE_READY;
-	
-	proc->name = name; // name is always owned
-	proc->ctx.cs = 0x08;
-	proc->ctx.ss = 0x10;
-	proc->stack = (uintptr_t)stack;
-	proc->ctx.rip = (uintptr_t)entry;
-	proc->ctx.rbp = proc->ctx.rsp = (uintptr_t)stack + PROCESS_STACK_SIZE;
-	asm volatile("pushfq\npopq %0" : "=r"(proc->ctx.rflags));
 
-	if (head) {
-		tail->next = proc;
-		proc->next = head;
-		tail = proc;
-	} else {
+	proc->stack = stack;
+	proc->ctx.rip = (uintptr_t)entry;
+	proc->ctx.rsp = (uintptr_t)stack + PROCESS_STACK_SIZE;
+	asm volatile("pushfq\npop %0" : "=r"(proc->ctx.rflags));
+
+	if (!head) {
 		head = tail = proc;
 		proc->next = proc;
+	} else {
+		tail->next = proc;
+		tail = proc;
+		proc->next = head;
 	}
 
 	if (!current)
-		current = head;
+		current = proc;
 
 	return proc;
 }
 
-// TODO: Improve
 oxy_noret process_exit(int ec) {
-	// we cant terminate the current process cuz its running
-	if (current->pid) {
-		current->ctx.rax = ec;
+	if (current->id) {
+		current->ec = ec;
 		current->state = PROCESS_STATE_ZOMBIE;
+
+		Process* prev = head;
+		while (prev->next != current)
+			prev = prev->next;
+		prev->next = current->next;
+		if (current == tail)
+			tail = prev;
 	}
 
-	// wait for re-schedule
+	// TODO: better rescheduling method
 	while (true)
 		asm volatile("hlt");
 }
@@ -69,36 +79,39 @@ Process* process_getCurrent() {
 	return current;
 }
 
-void scheduler_step(Context* ctx) {
+int process_wait(Process* proc) {
+	// TODO: better rescheduling method
+	while (proc->state != PROCESS_STATE_ZOMBIE)
+		asm volatile("hlt");
+	
+	int ec = proc->ec;
+
+	kfree(proc);
+#if PROCESS_STACK_SIZE == 0x1000
+		freepage(current->stack);
+#else
+		freepages(current->stack, PROCESS_STACK_SIZE / 0x1000);
+#endif
+
+	return ec;
+}
+
+void scheduler_step(ISRContext* ctx) {
 	if (!current)
 		return;
 
-	Process* toFree = nullptr;
-	Process* next = current->next;
+	Context* pctx = &current->ctx;
+	memcpy(pctx, ctx, sizeof(uintptr_t)*15);
+	pctx->rip = ctx->rip; pctx->rsp = ctx->rsp; pctx->rflags = ctx->rflags;
 
-	// reaper
-	if (current->state == PROCESS_STATE_ZOMBIE && current->pid) {
-		Process* prev = head;
-		while (prev->next != current)
-			prev = prev->next;
-		prev->next = current->next;
-
-		if (current == tail)
-			tail = prev;
-
-		toFree = current; // we have to defer ts cuz we are using the process's context rn
-		current = next;
-	} else {
-		memcpy(&current->ctx, ctx, sizeof(Context));
+	if (current->state != PROCESS_STATE_ZOMBIE)
 		current->state = PROCESS_STATE_READY;
-		current = next;
-	}
-
+	do {
+		current = current->next;
+	} while (current->state != PROCESS_STATE_READY);
 	current->state = PROCESS_STATE_RUNNING;
-	memcpy(ctx, &current->ctx, sizeof(Context));
 
-	if (toFree) {
-        freepages((void*)toFree->stack, PROCESS_STACK_SIZE / 0x1000);
-        kfree(toFree);
-    }
+	pctx = &current->ctx;
+	memcpy(ctx, pctx, sizeof(uintptr_t)*15);
+	ctx->rip = pctx->rip; ctx->rsp = pctx->rsp; ctx->rflags = pctx->rflags;
 }

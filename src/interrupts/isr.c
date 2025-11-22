@@ -31,15 +31,15 @@ void isr_register(uint8_t n, ISR f) {
 	handlers[n] = f;
 }
 
-extern void scheduler_step(Context* ctx);
+extern void scheduler_step(ISRContext* ctx);
 
-void isr_handler(Context* ctx) {
+void isr_handler(ISRContext* ctx) {
 	ISR f = handlers[ctx->interruptNumber];
 	if (f)
 		f(ctx);
 	else {
 		Process* proc = process_getCurrent();
-		if (proc->pid) {
+		if (proc->id) {
 			// TODO: Log this
 			// TODO: Call handler if available
 
@@ -47,52 +47,48 @@ void isr_handler(Context* ctx) {
 			proc->state = PROCESS_STATE_ZOMBIE;
 			switch (ctx->interruptNumber) {
 				case 0x00:
-					ctx->rax = STATUS_DIVIDE_BY_ZERO;
+					proc->ec = STATUS_DIVIDE_BY_ZERO;
 					break;
 				case 0x01:
-					ctx->rax = STATUS_DBG_SINGLESTEP;
+					proc->ec = STATUS_DBG_SINGLESTEP;
 					break;
 				case 0x03:
-					ctx->rax = STATUS_DBG_BREAKPOINT;
+					proc->ec = STATUS_DBG_BREAKPOINT;
 					break;
 				case 0x04:
-					ctx->rax = STATUS_OVERFLOW;
+					proc->ec = STATUS_OVERFLOW;
 					break;
 				case 0x06:
-					ctx->rax = STATUS_INVALID_OPCODE;
+					proc->ec = STATUS_INVALID_OPCODE;
 					break;
 				case 0x07:
-					ctx->rax = STATUS_NO_COPROCESSOR;
+					proc->ec = STATUS_NO_COPROCESSOR;
 					break;
 				case 0x09:
-					ctx->rax = STATUS_COPROC_OVERRUN;
+					proc->ec = STATUS_COPROC_OVERRUN;
 					break;
 				case 0x0A:
-					ctx->rax = STATUS_INVALID_TSS;
+					proc->ec = STATUS_INVALID_TSS;
 					break;
 				case 0x0B:
-					ctx->rax = STATUS_MISSING_SEGMENT;
+					proc->ec = STATUS_MISSING_SEGMENT;
 					break;
 
 				case 0x0E:
-					if (ctx->errorCode & 1)
-						ctx->rax = STATUS_ACCESS_VIOLATION;
-					else
-						ctx->rax = STATUS_PAGE_FAULT;
+					proc->ec = STATUS_ACCESS_VIOLATION;
 					break;
 
 				default:
-					ctx->rax = -1;
+					proc->ec = -1;
 					break;
 			}
-			proc->ctx.rax = ctx->rax;
 			scheduler_step(ctx);
 		} else
 			kpanic_ctx(ctx, "Unhandled exception: 0x%llx", ctx->interruptNumber);
 	}
 }
 
-void irq_handler(Context* ctx) {
+void irq_handler(ISRContext* ctx) {
 	if (ctx->interruptNumber >= 40)
 		outb(0xA0, 0x20);
 	outb(0x20, 0x20);

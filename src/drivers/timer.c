@@ -1,16 +1,16 @@
 #include "timer.h"
 
-#include "drivers/io.h"
-
 #include "vga/vga.h"
+#include "drivers/io.h"
+#include "proc/process.h"
 
 static oxy_data size_t ticks = 0;
 static oxy_data uint32_t freq = 0;
 static oxy_data uint8_t ticksSinceStep = 0;
 
-extern void scheduler_step(Context* ctx);
+extern void scheduler_step(ISRContext* ctx);
 
-void timer_heartbeat(Context* ctx) {
+void timer_heartbeat(ISRContext* ctx) {
 	if (ticksSinceStep >= 16) {
 		scheduler_step(ctx);
 		ticksSinceStep = 0;
