@@ -20,14 +20,17 @@ Process* process_create(const char* name, void(*entry)()) {
 	if (!proc)
 		return nullptr;
 
-#if PROCESS_STACK_SIZE == 0x1000
-	char* stack = allocpage(PAGE_READWRITE);
-#else
-	char* stack = allocpages(PROCESS_STACK_SIZE / 0x1000, PAGE_READWRITE);
-#endif
-	if (!stack) {
-		kfree(proc);
-		return nullptr;
+	char* stack = nullptr;
+	if (head) {
+	#if PROCESS_STACK_SIZE == 0x1000
+		stack = allocpage(PAGE_READWRITE);
+	#else
+		stack = allocpages(PROCESS_STACK_SIZE / 0x1000, PAGE_READWRITE);
+	#endif
+		if (!stack) {
+			kfree(proc);
+			return nullptr;
+		}
 	}
 
 	if (tail) proc->id = tail->id + 1;
@@ -37,9 +40,11 @@ Process* process_create(const char* name, void(*entry)()) {
 	proc->name = name;
 	proc->state = PROCESS_STATE_READY;
 
-	proc->stack = stack;
+	if (stack) {
+		proc->stack = stack;
+		proc->ctx.rsp = (uintptr_t)stack + PROCESS_STACK_SIZE;
+	}
 	proc->ctx.rip = (uintptr_t)entry;
-	proc->ctx.rsp = (uintptr_t)stack + PROCESS_STACK_SIZE;
 	asm volatile("pushfq\npop %0" : "=r"(proc->ctx.rflags));
 
 	if (!head) {
@@ -87,11 +92,13 @@ int process_wait(Process* proc) {
 	int ec = proc->ec;
 
 	kfree(proc);
+	if (current->stack) {
 #if PROCESS_STACK_SIZE == 0x1000
 		freepage(current->stack);
 #else
 		freepages(current->stack, PROCESS_STACK_SIZE / 0x1000);
 #endif
+	}
 
 	return ec;
 }

@@ -27,7 +27,7 @@ void kinit() {
 }
 
 void proc1() {
-	puts("Hello, World!\n");
+	puts((char*)0xDEADBEEF);
 	
 	process_exit(67);
 }
@@ -36,7 +36,7 @@ void kmain() {
 	kinit();
 
 	Process* p = process_create("proc1", proc1);
-	kprintf("%d\n", process_wait(p));
+	kprintf("0x%x\n", process_wait(p));
 
 	while (true)
 		asm volatile ("hlt");
